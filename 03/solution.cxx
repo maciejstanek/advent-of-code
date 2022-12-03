@@ -21,19 +21,6 @@ Strings parse_input(std::istream& input)
   return lines;
 }
 
-char solve(std::string const& line)
-{
-  std::set<char> left;
-  std::set<char> right;
-  auto half = line.begin() + line.size() / 2;
-  std::copy(line.begin(), half, std::inserter(left, left.end()));
-  std::copy(half, line.end(), std::inserter(right, right.end()));
-  std::vector<char> intersection;
-  std::set_intersection(
-      left.begin(), left.end(), right.begin(), right.end(), std::back_inserter(intersection));
-  return intersection.front();
-}
-
 std::string common_items(std::string const& rawA, std::string const& rawB)
 {
   std::set<char> a(rawA.begin(), rawA.end());
@@ -41,6 +28,14 @@ std::string common_items(std::string const& rawA, std::string const& rawB)
   std::string result;
   std::set_intersection(a.begin(), a.end(), b.begin(), b.end(), std::back_inserter(result));
   return result;
+}
+
+char solve(std::string const& line)
+{
+  auto half = line.begin() + line.size() / 2;
+  std::string left(line.begin(), half);
+  std::string right(half, line.end());
+  return common_items(left, right).at(0);
 }
 
 constexpr int priority(char item) { return (item < 'a') ? item - 'A' + 27 : item - 'a' + 1; }
