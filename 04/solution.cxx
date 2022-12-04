@@ -62,6 +62,23 @@ int solve(Pairs const& pairs)
       pairs.cbegin(), pairs.cend(), 0, std::plus<>(), [](auto const& pair) { return solve(pair); });
 }
 
+bool overlap(Range const& left, Range const& right)
+{
+  return left.first <= right.first && left.second <= right.second && left.second >= right.first;
+}
+
+bool solve_any_overlap(Pair const& pair)
+{
+  return overlap(pair.first, pair.second) || overlap(pair.second, pair.first)
+      || solve(pair);
+}
+
+int solve_any_overlap(Pairs const& pairs)
+{
+  return std::transform_reduce(
+      pairs.cbegin(), pairs.cend(), 0, std::plus<>(), [](auto const& pair) { return solve_any_overlap(pair); });
+}
+
 std::ostream& operator<<(std::ostream& output, Pair const& pair)
 {
   return output << "[" << pair.first.first << ":" << pair.first.second << "]+[" << pair.second.first
@@ -88,5 +105,6 @@ int main()
   auto input = parse_input(std::cin);
   /* std::cout << "DBG: " << input << "\n"; */
   std::cout << solve(input) << "\n";
+  std::cout << solve_any_overlap(input) << "\n";
   return 0;
 }
