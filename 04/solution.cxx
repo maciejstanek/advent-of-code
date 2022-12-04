@@ -79,31 +79,9 @@ int solve_any_overlap(Pairs const& pairs)
       pairs.cbegin(), pairs.cend(), 0, std::plus<>(), [](auto const& pair) { return solve_any_overlap(pair); });
 }
 
-std::ostream& operator<<(std::ostream& output, Pair const& pair)
-{
-  return output << "[" << pair.first.first << ":" << pair.first.second << "]+[" << pair.second.first
-                << ":" << pair.second.second << "]";
-}
-
-std::ostream& operator<<(std::ostream& output, Pairs const& pairs)
-{
-  output << "{";
-  auto first = true;
-  for (auto const& pair : pairs) {
-    if (first) {
-      first = false;
-    } else {
-      output << ",";
-    }
-    output << pair;
-  }
-  return output << "}";
-}
-
 int main()
 {
   auto input = parse_input(std::cin);
-  /* std::cout << "DBG: " << input << "\n"; */
   std::cout << solve(input) << "\n";
   std::cout << solve_any_overlap(input) << "\n";
   return 0;
