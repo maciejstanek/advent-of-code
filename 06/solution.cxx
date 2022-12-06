@@ -16,5 +16,6 @@ int main()
   std::string message;
   std::cin >> message;
   std::cout << solve(message, 4) << "\n";
+  std::cout << solve(message, 14) << "\n";
   return 0;
 }
