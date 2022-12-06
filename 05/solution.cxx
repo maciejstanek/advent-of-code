@@ -71,6 +71,8 @@ Commands parse_commands(std::istream& input)
     Command command;
     std::stringstream temp(line);
     temp >> command.count >> command.from >> command.to;
+    command.to -= 1;
+    command.from -= 1;
     commands.emplace_back(command);
   }
   return commands;
@@ -101,7 +103,29 @@ std::ostream& operator<<(
   return output;
 }
 
-std::string solve(Specification const& specification) { return "TODO"; }
+std::string top(Stacks const& stacks) {
+  std::string result;
+  result.reserve(stacks.size());
+  std::transform(stacks.cbegin(), stacks.cend(), std::back_inserter(result),
+      [](auto const& stack) { return stack.empty() ? ' ' : stack.back(); });
+  return result;
+}
+
+void solve_command(Command const& command, Stacks& stacks) {
+  for (auto i = 0; i < command.count; ++i) {
+    auto& from = stacks.at(command.from);
+    stacks.at(command.to).push_back(from.back());
+    from.pop_back();
+  }
+}
+
+std::string solve(Specification const& specification) {
+  auto stacks = specification.stacks;
+  for (auto const& command : specification.commands) {
+    solve_command(command, stacks);
+  }
+  return top(stacks);
+}
 
 int main()
 {
