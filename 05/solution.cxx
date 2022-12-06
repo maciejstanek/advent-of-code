@@ -119,6 +119,13 @@ void solve_command(Command const& command, Stacks& stacks) {
   }
 }
 
+void solve_9001_command(Command const& command, Stacks& stacks) {
+  auto& from = stacks.at(command.from);
+  auto& to = stacks.at(command.to);
+  std::copy(from.end() - command.count, from.end(), std::back_inserter(to));
+  from.resize(from.size() - command.count);
+}
+
 std::string solve(Specification const& specification) {
   auto stacks = specification.stacks;
   for (auto const& command : specification.commands) {
@@ -127,10 +134,19 @@ std::string solve(Specification const& specification) {
   return top(stacks);
 }
 
+std::string solve_9001(Specification const& specification) {
+  auto stacks = specification.stacks;
+  for (auto const& command : specification.commands) {
+    solve_9001_command(command, stacks);
+  }
+  return top(stacks);
+}
+
 int main()
 {
   auto input = parse_input(std::cin);
   std::cerr << input << "\n";
-  std::cout << "SOLUTION: " << solve(input) << "\n";
+  std::cout << "CrateMover 9000: " << solve(input) << "\n";
+  std::cout << "CrateMover 9001: " << solve_9001(input) << "\n";
   return 0;
 }
