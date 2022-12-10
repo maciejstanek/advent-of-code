@@ -160,7 +160,7 @@ std::unique_ptr<Tree> make_graph(Commands const& commands)
 
 void solve_impl(Tree const& tree, int& sum) {
   if (!tree.leaves.empty()) {
-    if (tree.size <= 100000) {
+    if (tree.size <= 100'000) {
       sum += tree.size;
     }
   }
@@ -175,6 +175,32 @@ int solve(Tree const& tree) {
   return sum;
 }
 
+Tree const* smallest_dir_to_delete(Tree const& tree, int needed_size)
+{
+  if (tree.leaves.empty()) {
+    return nullptr;
+  }
+  auto current_min_node = &tree;
+  for (auto const& node : tree.leaves) {
+    if(auto* smallest_subnode = smallest_dir_to_delete(node, needed_size)) {
+      if (smallest_subnode->size < current_min_node->size && smallest_subnode->size >= needed_size) {
+        current_min_node = smallest_subnode;
+      }
+    }
+  }
+  return current_min_node;
+}
+
+int solve_delete(Tree const& tree) {
+  const auto available_size = 70'000'000;
+  const auto update_size = 30'000'000;
+  const auto used_size = tree.size;
+  const auto unused_size = available_size - used_size;
+  const auto needed_size = update_size - unused_size;
+  assert(needed_size > 0);
+  return smallest_dir_to_delete(tree, needed_size)->size;
+}
+
 int main()
 {
   auto commands = parse(std::cin);
@@ -182,5 +208,6 @@ int main()
   auto tree = make_graph(commands);
   std::cout << *tree.get() << "\n";
   std::cout << solve(*tree.get()) << "\n";
+  std::cout << "DELETE: " << solve_delete(*tree.get()) << "\n";
   return 0;
 }
