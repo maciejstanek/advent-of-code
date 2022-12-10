@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 using Value = int;
 using Lists = std::vector<std::vector<Value>>;
@@ -26,16 +27,21 @@ Lists parse_input(std::istream& input)
   return lists;
 }
 
-Value solve(Lists const& lists)
+Value solve(Lists const& lists, int top_count)
 {
-  return std::transform_reduce(
-      lists.begin(), lists.end(), 0,
-      [](auto previous, auto current) { return std::max(previous, current); },
-      [](auto const& sublist) { return std::accumulate(sublist.cbegin(), sublist.cend(), 0); });
+  std::vector<int> elf_sums;
+  std::transform(lists.begin(), lists.end(), std::back_inserter(elf_sums),
+      [](auto const& sublist) {
+        return std::accumulate(sublist.cbegin(), sublist.cend(), 0);
+      });
+  std::sort(elf_sums.rbegin(), elf_sums.rend());
+  return std::accumulate(elf_sums.begin(), elf_sums.begin() + top_count, 0);
 }
 
 int main()
 {
-  std::cout << solve(parse_input(std::cin)) << "\n";
+  auto input = parse_input(std::cin);
+  std::cout << solve(input, 1) << "\n";
+  std::cout << solve(input, 3) << "\n";
   return 0;
 }
