@@ -47,14 +47,21 @@ std::ostream& operator<<(std::ostream& out, Position_memo const& memo)
   }
   return out << "}";
 }
-struct Rope {
-  Position head;
-  Position tail;
-};
+
+using Rope = std::vector<Position>;
 
 std::ostream& operator<<(std::ostream& out, Rope const& rope)
 {
-  return out << "(H" << rope.head << ")--<--(T" << rope.tail << ")";
+  out << "(H";
+  auto first = true;
+  for (auto const& knot : rope) {
+    if (!first) {
+      out << ")-<-(";
+    }
+    first = false;
+    out << knot;
+  }
+  return out << "T)";
 }
 
 Motions parse(std::istream& input)
@@ -107,8 +114,14 @@ Position move_tail(Position const& tail, Position const& head)
 
 Rope move_rope(Rope rope, Direction direction)
 {
-  rope.head = move_head(rope.head, direction);
-  rope.tail = move_tail(rope.tail, rope.head);
+  auto head = rope.begin();
+  *head = move_head(*head, direction);
+  auto tail = std::next(head);
+  while (tail != rope.end()) {
+    *tail = move_tail(*tail, *head);
+    head = tail;
+    tail = std::next(tail);
+  }
   return rope;
 }
 
@@ -117,23 +130,23 @@ Motion_result move_rope(Rope rope, Motion const& motion)
   Position_memo memo;
   for (auto i = 0; i < motion.count; ++i) {
     rope = move_rope(rope, motion.direction);
-    memo.insert(rope.tail);
+    memo.insert(rope.back());
   }
   return { memo, rope };
 }
 
-int solve(Motions const& motions)
+int solve(Motions const& motions, size_t length = 2)
 {
   Position_memo memo;
-  Rope rope {};
-  memo.insert(rope.tail);
+  Rope rope {length};
+  memo.insert(rope.back());
   for (auto const& motion : motions) {
     auto result = move_rope(rope, motion);
     memo.insert(result.memo.begin(), result.memo.end());
     rope = result.rope;
-    std::cerr << "MOTION = " << motion << "\n";
-    std::cerr << "ROPE STATE = " << rope << "\n";
-    std::cerr << "PARTIAL MEMO = " << result.memo << "\n";
+    //std::cerr << "MOTION = " << motion << "\n";
+    //std::cerr << "ROPE STATE = " << rope << "\n";
+    //std::cerr << "PARTIAL MEMO = " << result.memo << "\n";
   }
   return memo.size();
 }
@@ -141,6 +154,7 @@ int solve(Motions const& motions)
 int main()
 {
   auto commands = parse(std::cin);
-  std::cout << solve(commands) << "\n";
+  std::cout << "SOLUTION@2 " << solve(commands) << "\n";
+  std::cout << "SOLUTION@10 " << solve(commands, 10) << "\n";
   return 0;
 }
