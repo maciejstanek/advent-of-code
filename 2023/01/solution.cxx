@@ -50,7 +50,7 @@ auto main() -> int {
             auto found_view = tokens | std::views::transform(find_position);
             auto const min_elem = std::ranges::min_element(found_view);
             auto const pos = std::ranges::distance(std::ranges::begin(found_view), min_elem);
-            return pos > 9 ? pos - 9 : pos + 1;
+            return pos > 9 ? pos - 9 : pos;
         };
     };
 
