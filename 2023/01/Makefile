@@ -3,7 +3,7 @@
 all: a.out
 
 a.out: solution.cxx
-	clang++ --std=c++20 $<
+	g++ --std=c++23 -pedantic -Wall -Wextra -Weffc++ $<
 
 test: a.out
 	for input in tests/*.in ; do \
