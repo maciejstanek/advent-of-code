@@ -73,6 +73,7 @@ auto parse_games(Lines const& lines) -> Games {
 
 auto main() -> int {
     auto const games = parse_games(getlines(std::cin));
+
     auto const is_possible = [](Pull const& pull) {
         auto const max_pull = Pull{12, 13, 14};
         return pull.r <= max_pull.r && pull.g <= max_pull.g && pull.b <= max_pull.b;
@@ -85,5 +86,19 @@ auto main() -> int {
     };
     auto result = std::transform_reduce(games.cbegin(), games.cend(), 0, std::plus<>(), to_factor);
     std::cout << result << '\n';
+
+    auto min_span = [](Pull const& lhs, Pull const& rhs) -> Pull {
+        return {std::max(lhs.r, rhs.r), std::max(lhs.g, rhs.g), std::max(lhs.b, rhs.b)};
+    };
+    auto total_min_span = [&min_span](Pulls const& pulls) -> Pull {
+        return std::reduce(pulls.begin(), pulls.end(), Pull{}, min_span);
+    };
+    auto const to_factor2 = [&total_min_span](Game const& game) {
+        auto total = total_min_span(game.pulls);
+        return total.r * total.g * total.b;
+    };
+    auto result2 =
+        std::transform_reduce(games.cbegin(), games.cend(), 0, std::plus<>(), to_factor2);
+    std::cout << result2 << '\n';
     return 0;
 }
