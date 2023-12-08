@@ -34,24 +34,23 @@ auto find_part_numbers(Line const& part_line, Line const& number_line)
     auto part_iter = std::find_if(part_line.begin(), part_line.end(), is_part);
     std::vector<int> numbers{};
     while (part_iter != part_line.end()) {
-        std::cout << "    part" << *part_iter << std::endl;
         auto const number_pos = std::distance(part_line.begin(), part_iter);
         auto number_iter = number_line.begin() + number_pos;
+        // Find in the center, exclusive with corners
         if (std::isdigit(*number_iter)) {
-            std::cout << "      center" << std::endl;
             numbers.push_back(extend_parse(
                 number_line.begin(), number_iter, number_line.end()));
         } else {
+            // Find in the left corner
             if (number_iter != number_line.begin() &&
                 std::isdigit(*std::prev(number_iter))) {
-                std::cout << "      left" << std::endl;
                 numbers.push_back(extend_parse(
                     number_line.begin(), std::prev(number_iter),
                     number_line.end()));
             }
+            // Find in the right corner
             if (std::next(number_iter) != number_line.end() &&
                 std::isdigit(*std::next(number_iter))) {
-                std::cout << "      right" << std::endl;
                 numbers.push_back(extend_parse(
                     number_line.begin(), std::next(number_iter),
                     number_line.end()));
@@ -65,28 +64,24 @@ auto find_part_numbers(Line const& part_line, Line const& number_line)
 
 auto main() -> int {
     auto const lines = getlines(std::cin);
-
+    auto sum = 0;
     for (auto i = lines.begin(); i != lines.end(); ++i) {
-        std::cout << "line #" << std::distance(lines.begin(), i) << std::endl;
         // Compare previous to current
         if (i != lines.begin()) {
-            std::cout << "  compare to upper" << std::endl;
-            // TODO
-            for (auto x : find_part_numbers(*i, *std::prev(i))) {
-                std::cout << "        " << x << "\n";
-            }
+            auto numbers = find_part_numbers(*i, *std::prev(i));
+            sum += std::accumulate(numbers.begin(), numbers.end(), 0);
         }
         // Find in the current
         {
-            std::cout << "  compare to self" << std::endl;
-            // TODO
+            auto numbers = find_part_numbers(*i, *i);
+            sum += std::accumulate(numbers.begin(), numbers.end(), 0);
         }
         // Compare to the next
         if (std::next(i) != lines.end()) {
-            std::cout << "  compare to lower" << std::endl;
-            // TODO
+            auto numbers = find_part_numbers(*i, *std::next(i));
+            sum += std::accumulate(numbers.begin(), numbers.end(), 0);
         }
     }
-
+    std::cout << sum << '\n';
     return 0;
 }
