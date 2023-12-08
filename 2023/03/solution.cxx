@@ -16,62 +16,51 @@ auto getlines(std::istream& input) -> Lines {
     return lines;
 }
 
-auto extend_to_range(
+auto extend_parse(
     std::string::const_iterator begin, std::string::const_iterator iter,
-    std::string::const_iterator end)
-    -> std::pair<std::string::const_iterator, std::string::const_iterator> {
+    std::string::const_iterator end) -> int {
     auto const is_not_digit = [](char c) { return !std::isdigit(c); };
-
-    auto right = std::find_if(iter, end, is_not_digit);
-    auto left = std::find_if(
-                    std::make_reverse_iterator(iter),
-                    std::make_reverse_iterator(begin), is_not_digit)
-                    .base();
-    std::cout << "        " << std::string(left, right) << '\n';
-
-    return {};
+    auto const right = std::find_if(iter, end, is_not_digit);
+    auto const left = std::find_if(
+                          std::make_reverse_iterator(iter),
+                          std::make_reverse_iterator(begin), is_not_digit)
+                          .base();
+    return std::stoi(std::string{left, right});
 }
 
 auto find_part_numbers(Line const& part_line, Line const& number_line)
-    -> std::vector<std::string_view> {
+    -> std::vector<int> {
     auto const is_part = [](char c) { return !std::isdigit(c) && c != '.'; };
     auto part_iter = std::find_if(part_line.begin(), part_line.end(), is_part);
+    std::vector<int> numbers{};
     while (part_iter != part_line.end()) {
         std::cout << "    part" << *part_iter << std::endl;
         auto const number_pos = std::distance(part_line.begin(), part_iter);
         auto number_iter = number_line.begin() + number_pos;
         if (std::isdigit(*number_iter)) {
-            // Only one number above
             std::cout << "      center" << std::endl;
-            // TODO save result
-            extend_to_range(
-                number_line.begin(), number_iter, number_line.end());
+            numbers.push_back(extend_parse(
+                number_line.begin(), number_iter, number_line.end()));
         } else {
             if (number_iter != number_line.begin() &&
                 std::isdigit(*std::prev(number_iter))) {
                 std::cout << "      left" << std::endl;
-                // TODO save result
-                extend_to_range(
+                numbers.push_back(extend_parse(
                     number_line.begin(), std::prev(number_iter),
-                    number_line.end());
-            } else if (
-                std::next(number_iter) != number_line.end() &&
+                    number_line.end()));
+            }
+            if (std::next(number_iter) != number_line.end() &&
                 std::isdigit(*std::next(number_iter))) {
                 std::cout << "      right" << std::endl;
-                // TODO save result
-                extend_to_range(
+                numbers.push_back(extend_parse(
                     number_line.begin(), std::next(number_iter),
-                    number_line.end());
-            } else {
-                std::cout << "      none" << std::endl;
+                    number_line.end()));
             }
-            // Search in the corners for at most two numbers
         }
         part_iter =
             std::find_if(std::next(part_iter), part_line.end(), is_part);
     }
-    // TODO
-    return {};
+    return numbers;
 }
 
 auto main() -> int {
@@ -84,7 +73,7 @@ auto main() -> int {
             std::cout << "  compare to upper" << std::endl;
             // TODO
             for (auto x : find_part_numbers(*i, *std::prev(i))) {
-                std::cout << "DBG: " << x << "\n";
+                std::cout << "        " << x << "\n";
             }
         }
         // Find in the current
