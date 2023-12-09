@@ -138,8 +138,20 @@ auto main() -> int {
     auto const calc_part_sum = [](Labeled_part const& part) {
         return std::accumulate(part.labels.begin(), part.labels.end(), 0);
     };
-    auto const sum = std::transform_reduce(
-        parts.begin(), parts.end(), 0, std::plus{}, calc_part_sum);
-    std::cout << sum << '\n';
+    std::cout << std::transform_reduce(
+                     parts.begin(), parts.end(), 0, std::plus{}, calc_part_sum)
+              << '\n';
+
+    auto const calc_gear = [](Labeled_part const& part) {
+        return (part.part.symbol() == '*' && part.labels.size() == 2)
+                   ? std::accumulate(
+                         part.labels.begin(), part.labels.end(), 1,
+                         std::multiplies{})
+                   : 0;
+    };
+    std::cout << std::transform_reduce(
+                     parts.begin(), parts.end(), 0, std::plus{}, calc_gear)
+              << '\n';
+
     return 0;
 }
