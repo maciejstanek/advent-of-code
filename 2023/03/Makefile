@@ -8,10 +8,10 @@ a.out: solution.cxx
 test: a.out
 	for input in tests/*.in ; do \
 	  echo $$input ; \
-	  cat $$input | ./a.out ; \
+	  cat $$input | ./a.out | head ; \
 	  output="$${input%%.*}.out" ; \
 	  echo $$output ; \
-	  cat $$output ; \
+	  head $$output ; \
 	done
 
 clean:
