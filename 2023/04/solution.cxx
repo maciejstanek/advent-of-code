@@ -52,7 +52,7 @@ auto get_points_for_cards_number(int n) -> int {
     return result;
 }
 
-auto calculate_points(Card const& card) -> int {
+auto calculate_matching_count(Card const& card) -> int {
     auto winners = card.winners;
     std::sort(winners.begin(), winners.end());
     auto numbers = card.numbers;
@@ -61,11 +61,13 @@ auto calculate_points(Card const& card) -> int {
     std::set_intersection(
         winners.begin(), winners.end(), numbers.begin(), numbers.end(),
         std::back_inserter(intersection));
-    return get_points_for_cards_number(intersection.size());
+    return intersection.size();
 }
 
 auto calculate_points(Cards const& cards) -> int {
-    auto const transform = [](auto const& x) { return calculate_points(x); };
+    auto const transform = [](auto const& x) {
+        return get_points_for_cards_number(calculate_matching_count(x));
+    };
     return std::transform_reduce(
         cards.begin(), cards.end(), 0, std::plus<>(), transform);
 }
