@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cassert>
 #include <iostream>
 #include <numeric>
 #include <optional>
@@ -72,9 +73,36 @@ auto calculate_points(Cards const& cards) -> int {
         cards.begin(), cards.end(), 0, std::plus<>(), transform);
 }
 
+auto calculate_matching_counts(Cards const& cards) -> std::vector<int> {
+    auto const transform = [](auto const& x) {
+        return calculate_matching_count(x);
+    };
+    std::vector<int> counts;
+    counts.reserve(cards.size());
+    std::transform(
+        cards.begin(), cards.end(), std::back_inserter(counts), transform);
+    return counts;
+}
+
+auto calculate_copies_count(Cards const& cards) -> int {
+    auto const counts = calculate_matching_counts(cards);
+    std::vector<int> copies(counts.size(), 1);
+    for (auto iter = counts.begin(); iter != counts.end(); ++iter) {
+        auto current_pos = std::distance(counts.begin(), iter);
+        for (auto i = 0; i < *iter; ++i) {
+            // Input assumption: no copy past the ticket end
+            assert(static_cast<long unsigned>(i) < copies.size());
+            copies[current_pos + i + 1] += copies[current_pos];
+        }
+    }
+    return std::accumulate(copies.begin(), copies.end(), 0);
+}
+
 auto main() -> int {
     auto const cards = parse_cards(std::cin);
     auto const points = calculate_points(cards);
     std::cout << points << "\n";
+    auto const copies_count = calculate_copies_count(cards);
+    std::cout << copies_count << "\n";
     return 0;
 }
