@@ -37,17 +37,23 @@ struct Span {
     int from;
     int length;
 };
+using Spans = std::vector<Span>;
 struct Map {
     std::string to;
-    std::vector<Span> entries;
+    Spans entries;
 };
 using Almanac = std::map<std::string, Map>;
-using Seeds = std::vector<int>;
+using Value = int;
+using Values = std::vector<Value>;
+struct Named_values {
+    std::string name;
+    Values values;
+};
 
-auto parse_seeds(Line const& line) -> Seeds {
+auto parse_seeds(Line const& line) -> Named_values {
     auto const seeds_begin = std::find(line.begin(), line.end(), ':');
     assert(seeds_begin != line.end());
-    return parse_numbers(seeds_begin, line.end());
+    return Named_values{"seed", parse_numbers(seeds_begin, line.end())};
 }
 
 auto parse_map(Lines::const_iterator begin, Lines::const_iterator end)
@@ -73,9 +79,10 @@ auto parse_map(Lines::const_iterator begin, Lines::const_iterator end)
     return std::make_pair(from, Map{to, entries});
 }
 
-auto interpret_lines(std::vector<std::string> const& lines) -> std::pair<Seeds, Almanac> {
+auto interpret_lines(std::vector<std::string> const& lines)
+    -> std::pair<Named_values, Almanac> {
     Almanac almanac{};
-    Seeds seeds;
+    Named_values seeds{};
     auto current = lines.begin();
     while (current != lines.end()) {
         if (current->starts_with("seeds:")) {
@@ -95,10 +102,10 @@ auto interpret_lines(std::vector<std::string> const& lines) -> std::pair<Seeds, 
     return {seeds, almanac};
 }
 
-auto print(std::ostream& out, Seeds const& seeds) -> void {
-    out << "SEEDS:";
-    for (auto x : seeds) {
-        out << " " << x;
+auto print(std::ostream& out, Named_values const& values) -> void {
+    out << values.name << ":";
+    for (auto value : values.values) {
+        out << " " << value;
     }
     out << '\n';
 }
@@ -108,16 +115,42 @@ auto print(std::ostream& out, Almanac const& almanac) -> void {
         out << "FROM " << x;
         out << " TO " << y.to << "\n";
         for (auto const& z : y.entries) {
-            out << "  [" << z.from << ":" << z.from + z.length - 1
-                      << "] -> [" << z.to << ":" << z.to + z.length - 1
-                      << "]\n";
+            out << "  [" << z.from << ":" << z.from + z.length - 1 << "] -> ["
+                << z.to << ":" << z.to + z.length - 1 << "]\n";
         }
     }
+}
+
+auto resolve_mapping(Spans const& spans, Value value) -> Value {
+    // TODO
+    return 1;
+}
+
+auto resolve_mapping(Spans const& spans, Values values) -> Values {
+    std::transform(
+        values.begin(), values.end(), values.begin(),
+        [&spans](Value value) { return resolve_mapping(spans, value); });
+    return values;
+}
+
+auto resolve_mappings(Almanac const& almanac, Named_values values)
+    -> Named_values {
+    while (almanac.count(values.name)) {
+        auto const& entry = almanac.at(values.name);
+        values.values = resolve_mapping(entry.entries, values.values);
+        values.name = entry.to;
+    }
+    return values;
 }
 
 auto main() -> int {
     auto const [seeds, almanac] = interpret_lines(parse_lines(std::cin));
     print(std::cout, seeds);
     print(std::cout, almanac);
+    auto const resolved = resolve_mappings(almanac, seeds);
+    auto resolved_min =
+        *std::min_element(resolved.values.begin(), resolved.values.end());
+    std::cout << resolved_min << std::endl;
+
     return 0;
 }
