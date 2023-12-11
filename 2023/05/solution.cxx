@@ -96,21 +96,25 @@ auto interpret_lines(std::vector<std::string> const& lines) -> Almanac {
     return almanac;
 }
 
-auto main() -> int {
-    auto const almanac = interpret_lines(parse_lines(std::cin));
-    std::cout << "SEEDS:";
+auto print(std::ostream& out, Almanac const& almanac) -> void {
+    out << "SEEDS:";
     for (auto x : almanac.seeds) {
-        std::cout << " " << x;
+        out << " " << x;
     }
-    std::cout << std::endl;
+    out << '\n';
     for (auto const& [x, y] : almanac.map) {
-        std::cout << "FROM " << x;
-        std::cout << " TO " << y.to << "\n";
+        out << "FROM " << x;
+        out << " TO " << y.to << "\n";
         for (auto const& z : y.entries) {
-            std::cout << "  [" << z.from << ":" << z.from + z.length - 1
+            out << "  [" << z.from << ":" << z.from + z.length - 1
                       << "] -> [" << z.to << ":" << z.to + z.length - 1
                       << "]\n";
         }
     }
+}
+
+auto main() -> int {
+    auto const almanac = interpret_lines(parse_lines(std::cin));
+    print(std::cout, almanac);
     return 0;
 }
