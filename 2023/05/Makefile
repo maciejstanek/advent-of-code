@@ -1,9 +1,12 @@
 .PHONY: all clean test
 
+CC=g++
+CXXFLAGS=--std=c++23 -pedantic -Wall -Wextra -Weffc++
+
 all: a.out
 
 a.out: solution.cxx
-	g++ --std=c++23 -pedantic -Wall -Wextra -Weffc++ $<
+	$(CC) $(CXXFLAGS) $<
 
 test: a.out
 	for input in tests/*.in ; do \

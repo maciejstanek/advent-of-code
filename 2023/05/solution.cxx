@@ -19,23 +19,26 @@ auto parse_lines(std::istream& input) -> Lines {
     return lines;
 }
 
+using Value = long;
+using Values = std::vector<Value>;
+
 auto parse_numbers(Line::const_iterator begin, Line::const_iterator end)
-    -> std::vector<int> {
-    std::vector<int> numbers;
+    -> Values {
+    Values numbers;
     auto const is_digit = [](char c) { return std::isdigit(c); };
     auto current = std::find_if(begin, end, is_digit);
     while (current != end) {
         auto current_end = std::find_if_not(current, end, is_digit);
-        numbers.push_back(std::stoi(std::string(current, current_end)));
+        numbers.push_back(std::stol(std::string(current, current_end)));
         current = std::find_if(current_end, end, is_digit);
     }
     return numbers;
 }
 
 struct Span {
-    int to;
-    int from;
-    int length;
+    Value to;
+    Value from;
+    Value length;
 };
 using Spans = std::vector<Span>;
 struct Map {
@@ -43,8 +46,6 @@ struct Map {
     Spans entries;
 };
 using Almanac = std::map<std::string, Map>;
-using Value = int;
-using Values = std::vector<Value>;
 struct Named_values {
     std::string name;
     Values values;
@@ -121,9 +122,19 @@ auto print(std::ostream& out, Almanac const& almanac) -> void {
     }
 }
 
+auto value_in_span(Value value, Span const& span) -> bool {
+    return value > span.from && value <= span.from + span.length;
+}
+
+auto map_value(Value value, Span const& span) -> Value {
+    return value + span.to - span.from;
+}
+
 auto resolve_mapping(Spans const& spans, Value value) -> Value {
-    // TODO
-    return 1;
+    auto found = std::find_if(
+        spans.begin(), spans.end(),
+        [&value](Span const& span) { return value_in_span(value, span); });
+    return found == spans.end() ? value : map_value(value, *found);
 }
 
 auto resolve_mapping(Spans const& spans, Values values) -> Values {
