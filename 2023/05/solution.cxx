@@ -41,12 +41,10 @@ struct Map {
     std::string to;
     std::vector<Span> entries;
 };
-struct Almanac {
-    std::vector<int> seeds;
-    std::map<std::string, Map> map;
-};
+using Almanac = std::map<std::string, Map>;
+using Seeds = std::vector<int>;
 
-auto parse_seeds(Line const& line) -> std::vector<int> {
+auto parse_seeds(Line const& line) -> Seeds {
     auto const seeds_begin = std::find(line.begin(), line.end(), ':');
     assert(seeds_begin != line.end());
     return parse_numbers(seeds_begin, line.end());
@@ -75,34 +73,38 @@ auto parse_map(Lines::const_iterator begin, Lines::const_iterator end)
     return std::make_pair(from, Map{to, entries});
 }
 
-auto interpret_lines(std::vector<std::string> const& lines) -> Almanac {
+auto interpret_lines(std::vector<std::string> const& lines) -> std::pair<Seeds, Almanac> {
     Almanac almanac{};
+    Seeds seeds;
     auto current = lines.begin();
     while (current != lines.end()) {
         if (current->starts_with("seeds:")) {
-            almanac.seeds = parse_seeds(*current);
+            seeds = parse_seeds(*current);
             ++current;
         } else if (current->find("map:") != std::string::npos) {
             auto const is_empty = [](std::string const& line) {
                 return line.empty();
             };
             auto const end = find_if(current, lines.end(), is_empty);
-            almanac.map.emplace(parse_map(current, end));
+            almanac.emplace(parse_map(current, end));
             current = end;
         } else if (current->empty()) {
             ++current;
         }
     }
-    return almanac;
+    return {seeds, almanac};
 }
 
-auto print(std::ostream& out, Almanac const& almanac) -> void {
+auto print(std::ostream& out, Seeds const& seeds) -> void {
     out << "SEEDS:";
-    for (auto x : almanac.seeds) {
+    for (auto x : seeds) {
         out << " " << x;
     }
     out << '\n';
-    for (auto const& [x, y] : almanac.map) {
+}
+
+auto print(std::ostream& out, Almanac const& almanac) -> void {
+    for (auto const& [x, y] : almanac) {
         out << "FROM " << x;
         out << " TO " << y.to << "\n";
         for (auto const& z : y.entries) {
@@ -114,7 +116,8 @@ auto print(std::ostream& out, Almanac const& almanac) -> void {
 }
 
 auto main() -> int {
-    auto const almanac = interpret_lines(parse_lines(std::cin));
+    auto const [seeds, almanac] = interpret_lines(parse_lines(std::cin));
+    print(std::cout, seeds);
     print(std::cout, almanac);
     return 0;
 }
