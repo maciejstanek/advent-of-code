@@ -35,15 +35,15 @@ auto parse_numbers(Line::const_iterator begin, Line::const_iterator end)
     return numbers;
 }
 
-struct Span {
+struct Entry {
     Value to;
     Value from;
     Value length;
 };
-using Spans = std::vector<Span>;
+using Entries = std::vector<Entry>;
 struct Map {
     std::string to;
-    Spans entries;
+    Entries entries;
 };
 using Almanac = std::map<std::string, Map>;
 struct Named_values {
@@ -68,7 +68,7 @@ auto parse_map(Lines::const_iterator begin, Lines::const_iterator end)
     auto const from = std::string(header.begin(), first_dash);
     auto const to = std::string(std::next(second_dash), space);
 
-    std::vector<Span> entries;
+    Entries entries;
     ++begin;
     while (begin != end) {
         auto values = parse_numbers(begin->begin(), begin->end());
@@ -122,25 +122,25 @@ auto print(std::ostream& out, Almanac const& almanac) -> void {
     }
 }
 
-auto value_in_span(Value value, Span const& span) -> bool {
-    return value > span.from && value <= span.from + span.length;
+auto value_in_entry(Value value, Entry const& entry) -> bool {
+    return value > entry.from && value <= entry.from + entry.length;
 }
 
-auto map_value(Value value, Span const& span) -> Value {
-    return value + span.to - span.from;
+auto map_value(Value value, Entry const& entry) -> Value {
+    return value + entry.to - entry.from;
 }
 
-auto resolve_mapping(Spans const& spans, Value value) -> Value {
+auto resolve_mapping(Entries const& entries, Value value) -> Value {
     auto found = std::find_if(
-        spans.begin(), spans.end(),
-        [&value](Span const& span) { return value_in_span(value, span); });
-    return found == spans.end() ? value : map_value(value, *found);
+        entries.begin(), entries.end(),
+        [&value](Entry const& entry) { return value_in_entry(value, entry); });
+    return found == entries.end() ? value : map_value(value, *found);
 }
 
-auto resolve_mapping(Spans const& spans, Values values) -> Values {
+auto resolve_mapping(Entries const& entries, Values values) -> Values {
     std::transform(
         values.begin(), values.end(), values.begin(),
-        [&spans](Value value) { return resolve_mapping(spans, value); });
+        [&entries](Value value) { return resolve_mapping(entries, value); });
     return values;
 }
 
