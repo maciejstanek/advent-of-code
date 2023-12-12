@@ -35,6 +35,15 @@ auto parse_numbers(Line::const_iterator begin, Line::const_iterator end)
     return numbers;
 }
 
+struct Span {
+    Value start;
+    Value length;
+};
+using Spans = std::vector<Span>;
+struct Named_spans {
+    std::string name;
+    Spans spans;
+};
 struct Entry {
     Value to;
     Value from;
@@ -51,10 +60,33 @@ struct Named_values {
     Values values;
 };
 
-auto parse_seeds(Line const& line) -> Named_values {
+auto interpret_as_values(Values const& values) -> Spans {
+    Spans spans;
+    spans.reserve(values.size());
+    std::transform(
+        values.begin(), values.end(), std::back_inserter(spans),
+        [](Value value) -> Span {
+            return {value, 1};
+        });
+    return spans;
+}
+
+auto interpret_as_spans(Values const& values) -> Spans {
+    Spans spans;
+    assert(values.size() % 2 == 0);
+    spans.reserve(values.size() / 2);
+    // Missing std::ranges::to and std::ranges::views::chunk
+    for (auto i = values.begin(); i != values.end(); i += 2) {
+        spans.emplace_back(*i, *std::next(i));
+    }
+    return spans;
+}
+
+auto parse_seeds(Line const& line, auto interpretor) -> Named_spans {
     auto const seeds_begin = std::find(line.begin(), line.end(), ':');
     assert(seeds_begin != line.end());
-    return Named_values{"seed", parse_numbers(seeds_begin, line.end())};
+    return Named_spans{
+        "seed", interpretor(parse_numbers(seeds_begin, line.end()))};
 }
 
 auto parse_map(Lines::const_iterator begin, Lines::const_iterator end)
@@ -81,13 +113,17 @@ auto parse_map(Lines::const_iterator begin, Lines::const_iterator end)
 }
 
 auto interpret_lines(std::vector<std::string> const& lines)
-    -> std::pair<Named_values, Almanac> {
+    -> std::tuple<Named_spans, Named_spans, Almanac> {
     Almanac almanac{};
-    Named_values seeds{};
+    Named_spans seeds{};
+    Named_spans seed_spans{};
     auto current = lines.begin();
     while (current != lines.end()) {
         if (current->starts_with("seeds:")) {
-            seeds = parse_seeds(*current);
+            seeds = parse_seeds(
+                *current, [](auto x) { return interpret_as_values(x); });
+            seed_spans = parse_seeds(
+                *current, [](auto x) { return interpret_as_spans(x); });
             ++current;
         } else if (current->find("map:") != std::string::npos) {
             auto const is_empty = [](std::string const& line) {
@@ -100,13 +136,13 @@ auto interpret_lines(std::vector<std::string> const& lines)
             ++current;
         }
     }
-    return {seeds, almanac};
+    return {seeds, seed_spans, almanac};
 }
 
-auto print(std::ostream& out, Named_values const& values) -> void {
-    out << values.name << ":";
-    for (auto value : values.values) {
-        out << " " << value;
+auto print(std::ostream& out, Named_spans const& spans) -> void {
+    out << spans.name << ":";
+    for (auto span : spans.spans) {
+        out << " [" << span.start << ":" << span.start + span.length - 1 << "]";
     }
     out << '\n';
 }
@@ -155,13 +191,16 @@ auto resolve_mappings(Almanac const& almanac, Named_values values)
 }
 
 auto main() -> int {
-    auto const [seeds, almanac] = interpret_lines(parse_lines(std::cin));
+    auto const [seeds, seed_spans, almanac] =
+        interpret_lines(parse_lines(std::cin));
     print(std::cout, seeds);
+    print(std::cout, seed_spans);
     print(std::cout, almanac);
-    auto const resolved = resolve_mappings(almanac, seeds);
-    auto resolved_min =
-        *std::min_element(resolved.values.begin(), resolved.values.end());
-    std::cout << resolved_min << std::endl;
+    // auto const resolved = resolve_mappings(almanac, seeds);
+    // auto resolved_min =
+    //     *std::min_element(resolved.values.begin(),
+    //     resolved.values.end());
+    // std::cout << resolved_min << std::endl;
 
     return 0;
 }
