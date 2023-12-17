@@ -38,8 +38,11 @@ auto parse_numbers(Line::const_iterator begin, Line::const_iterator end)
 struct Span {
     Value start;
     Value length;
+    Value end() const { return start + length; }
 };
+using Span_opt = std::optional<Span>;
 using Spans = std::vector<Span>;
+using Span_opts = std::vector<Span_opt>;
 struct Named_spans {
     std::string name;
     Spans spans;
@@ -48,6 +51,8 @@ struct Entry {
     Value to;
     Value from;
     Value length;
+    Value from_end() const { return from + length; }
+    Value offset() const { return to - from; }
 };
 using Entries = std::vector<Entry>;
 struct Map {
@@ -158,36 +163,88 @@ auto print(std::ostream& out, Almanac const& almanac) -> void {
     }
 }
 
-auto value_in_entry(Value value, Entry const& entry) -> bool {
-    return value > entry.from && value <= entry.from + entry.length;
+auto translate_span(Span const& span, Entry const& entry)
+    -> std::pair<Span_opt, Span_opt> {
+    auto const start = std::max(span.start, entry.from);
+    auto const end = std::min(span.end(), entry.from_end());
+    return end > start ? std::make_pair(
+                             Span_opt{{start, end - start}},
+                             Span_opt{{start + entry.offset(), end - start}})
+                       : std::make_pair(Span_opt{}, Span_opt{});
 }
 
-auto map_value(Value value, Entry const& entry) -> Value {
-    return value + entry.to - entry.from;
-}
-
-auto resolve_mapping(Entries const& entries, Value value) -> Value {
-    auto found = std::find_if(
-        entries.begin(), entries.end(),
-        [&value](Entry const& entry) { return value_in_entry(value, entry); });
-    return found == entries.end() ? value : map_value(value, *found);
-}
-
-auto resolve_mapping(Entries const& entries, Values values) -> Values {
-    std::transform(
-        values.begin(), values.end(), values.begin(),
-        [&entries](Value value) { return resolve_mapping(entries, value); });
-    return values;
-}
-
-auto resolve_mappings(Almanac const& almanac, Named_values values)
-    -> Named_values {
-    while (almanac.count(values.name)) {
-        auto const& entry = almanac.at(values.name);
-        values.values = resolve_mapping(entry.entries, values.values);
-        values.name = entry.to;
+auto translate_span(Span const& span, Entries const& entries)
+    -> std::pair<Spans, Spans> {
+    Spans sources;
+    Spans translations;
+    for (auto const& entry : entries) {
+        auto [source, translation] = translate_span(span, entry);
+        if (source.has_value()) {
+            sources.push_back(*source);
+        }
+        if (translation.has_value()) {
+            translations.push_back(*translation);
+        }
     }
-    return values;
+    return std::make_pair(sources, translations);
+}
+
+auto make_spans_inverse(Spans matches, Span full_span) -> Spans {
+    Spans spans;
+    std::sort(matches.begin(), matches.end(), [](Span const& a, Span const& b) {
+        return a.start < b.start;
+    });
+    auto start = full_span.start;
+    for (auto const& match : matches) {
+        auto const length = match.start - start;
+        if (length > 0) {
+            spans.emplace_back(start, length);
+        }
+        start = match.start + match.length;
+    }
+    if (start < full_span.start + full_span.length) {
+        spans.emplace_back(start, full_span.length + full_span.start - start);
+    }
+    return spans;
+}
+
+auto resolve_mapping(Entries const& entries, Span span) -> Spans {
+    Spans spans;
+    auto const [matches, translations] = translate_span(span, entries);
+    spans.reserve(2 * translations.size() + 1);
+    std::copy(
+        translations.begin(), translations.end(), std::back_inserter(spans));
+    auto const inverses = make_spans_inverse(matches, span);
+    std::copy(inverses.begin(), inverses.end(), std::back_inserter(spans));
+
+    return spans;
+}
+
+auto resolve_mapping(Entries const& entries, Spans const& spans) -> Spans {
+    Spans results{};
+    for (auto const& span : spans) {
+        // One span can be mapped to multiple spans
+        auto partial = resolve_mapping(entries, span);
+        results.insert(results.begin(), partial.begin(), partial.end());
+    }
+    return results;
+}
+
+auto resolve_mappings(Almanac const& almanac, Named_spans spans)
+    -> Named_spans {
+    while (almanac.count(spans.name)) {
+        auto const& entry = almanac.at(spans.name);
+        spans.spans = resolve_mapping(entry.entries, spans.spans);
+        spans.name = entry.to;
+    }
+    return spans;
+}
+
+auto calculate_min(Spans const& spans) -> Value {
+    return std::min_element(
+               spans.begin(), spans.end(),
+               [](Span const& a, Span const& b) { return a.start < b.start; })
+        ->start;
 }
 
 auto main() -> int {
@@ -196,11 +253,12 @@ auto main() -> int {
     print(std::cout, seeds);
     print(std::cout, seed_spans);
     print(std::cout, almanac);
-    // auto const resolved = resolve_mappings(almanac, seeds);
-    // auto resolved_min =
-    //     *std::min_element(resolved.values.begin(),
-    //     resolved.values.end());
-    // std::cout << resolved_min << std::endl;
+    auto const resolved = resolve_mappings(almanac, seeds);
+    print(std::cout, resolved);
+    std::cout << calculate_min(resolved.spans) << std::endl;
+    auto const resolved2 = resolve_mappings(almanac, seed_spans);
+    print(std::cout, resolved2);
+    std::cout << calculate_min(resolved2.spans) << std::endl;
 
     return 0;
 }
