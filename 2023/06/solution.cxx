@@ -13,8 +13,9 @@ using Line_iter = Line::const_iterator;
 using Value = long;
 using Values = std::vector<Value>;
 
-auto parse_values(Line_iter begin, Line_iter end) -> Values {
+auto parse_values(Line_iter begin, Line_iter end) -> std::pair<Values, Value> {
     Values values;
+    Line concated;
     while (begin != end) {
         begin =
             std::find_if(begin, end, [](auto x) { return std::isdigit(x); });
@@ -22,23 +23,27 @@ auto parse_values(Line_iter begin, Line_iter end) -> Values {
             break;
         }
         auto const after = std::find(begin, end, ' ');
-        values.push_back(std::stoi(std::string(begin, after)));
+        auto part = std::string(begin, after);
+        values.push_back(std::stol(part));
+        concated += part;
         begin = after;
     }
-    return values;
+    return std::make_pair(values, std::stol(concated));
 }
 
-auto parse(std::istream& input) -> std::pair<Values, Values> {
+auto parse(std::istream& input)
+    -> std::pair<std::pair<Values, Values>, std::pair<Value, Value>> {
     Line time_str;
     Line distance_str;
     std::getline(input, time_str);
     std::getline(input, distance_str);
-    auto times = parse_values(
+    auto [times, time] = parse_values(
         std::find(time_str.begin(), time_str.end(), ':') + 1, time_str.end());
-    auto distances = parse_values(
+    auto [distances, distance] = parse_values(
         std::find(distance_str.begin(), distance_str.end(), ':') + 1,
         distance_str.end());
-    return std::make_pair(times, distances);
+    return std::make_pair(
+        std::make_pair(times, distances), std::make_pair(time, distance));
 }
 
 auto calculate_distance_from_charge_and_total_time(
@@ -94,7 +99,9 @@ auto calculate_number_of_ways_to_win(Value time, Value distance) -> Value {
 }
 
 auto main() -> int {
-    auto const [times, distances] = parse(std::cin);
+    auto const [pt1, pt2] = parse(std::cin);
+    auto const [times, distances] = pt1;
+    auto const [time, distance] = pt2;
     Values results;
     results.reserve(times.size());
     std::transform(
@@ -105,5 +112,6 @@ auto main() -> int {
     auto result =
         std::accumulate(results.begin(), results.end(), 1, std::multiplies{});
     std::cout << result << std::endl;
+    std::cout << calculate_number_of_ways_to_win(time, distance) << std::endl;
     return 0;
 }
