@@ -1,7 +1,8 @@
 #include <algorithm>
 #include <array>
 #include <iostream>
-#include <unordered_map>
+#include <map>
+#include <vector>
 
 struct Steps {
     Steps(std::string const& _steps) : steps{_steps} {};
@@ -21,6 +22,7 @@ struct Steps {
         return steps.size() * (rotations - 1) +
                std::distance(steps.cbegin(), iter);
     }
+    auto size() const -> unsigned int { return steps.size(); }
 
 private:
     std::string steps;
@@ -29,16 +31,9 @@ private:
 };
 
 using Id = std::array<char, 3>;
+using Ids = std::vector<Id>;
 using Entry = std::pair<Id, Id>;
-using Atlas = std::unordered_map<Id, Entry>;
-
-template <>
-struct std::hash<Id> {
-    std::size_t operator()(const Id& id) const {
-        return static_cast<int>(id[0]) << 16 ^ static_cast<int>(id[1]) << 8 ^
-               static_cast<int>(id[0]);
-    }
-};
+using Atlas = std::map<Id, Entry>;
 
 auto parse_id(std::string::const_iterator i) -> Id {
     return {*i, *(i + 1), *(i + 2)};
@@ -75,15 +70,54 @@ auto print(Atlas const& atlas) -> void {
     }
 }
 
+auto is_finish_pos(Id const& id) -> bool {
+    return id[0] == 'Z' && id[1] == 'Z' && id[2] == 'Z';
+}
+
+auto is_finish_pos_pt2(Id const& id) -> bool { return id[2] == 'Z'; }
+
+auto is_starting_pos(Id const& id) -> bool {
+    return id[0] == 'A' && id[1] == 'A' && id[2] == 'A';
+}
+
+auto is_starting_pos_pt2(Id const& id) -> bool { return id[2] == 'A'; }
+
+typedef bool (*id_filter_t)(Id const& id);
+
+auto generate_starting_positions(Atlas const& atlas, id_filter_t filter)
+    -> Ids {
+    Ids ids;
+    for (auto const& [from, _] : atlas) {
+        if (filter(from)) {
+            ids.push_back(from);
+        }
+    }
+    return ids;
+}
+
+auto make_step(Ids& ids, Atlas const& atlas, char dir) -> void {
+    for (auto& id : ids) {
+        id = (dir == 'L') ? atlas.at(id).first : atlas.at(id).second;
+    }
+}
+
+auto calculate_steps(
+    Atlas const& atlas, Steps steps, id_filter_t is_starting,
+    id_filter_t is_finish) -> int {
+    auto current = generate_starting_positions(atlas, is_starting);
+    while (!std::all_of(current.begin(), current.end(), is_finish)) {
+        make_step(current, atlas, steps.get_step());
+    }
+    return steps.get_count();
+}
+
 auto main() -> int {
     auto [steps, atlas] = parse(std::cin);
-    print(atlas);
-    auto current = Id{'A', 'A', 'A'};
-    auto const target = Id{'Z', 'Z', 'Z'};
-    while (current != target) {
-        current = (steps.get_step() == 'L') ? atlas[current].first :
-                                              atlas[current].second;
-    }
-    std::cout << steps.get_count() << std::endl;
+    /* print(atlas); */
+    std::cout << calculate_steps(atlas, steps, is_starting_pos, is_finish_pos)
+              << std::endl;
+    std::cout << calculate_steps(
+                     atlas, steps, is_starting_pos_pt2, is_finish_pos_pt2)
+              << std::endl;
     return 0;
 }
