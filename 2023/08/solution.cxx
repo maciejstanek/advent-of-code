@@ -3,6 +3,7 @@
 #include <iostream>
 #include <map>
 #include <vector>
+#include <set>
 
 struct Steps {
     Steps(std::string const& _steps) : steps{_steps} {};
@@ -63,13 +64,6 @@ auto operator<<(std::ostream& out, Id const& id) -> std::ostream& {
     return out << id[0] << id[1] << id[2];
 }
 
-auto print(Atlas const& atlas) -> void {
-    for (auto const& [from, to] : atlas) {
-        std::cout << "(" << from << ") -> L(" << to.first << ") R(" << to.second
-                  << ")\n";
-    }
-}
-
 auto is_finish_pos(Id const& id) -> bool {
     return id[0] == 'Z' && id[1] == 'Z' && id[2] == 'Z';
 }
@@ -81,6 +75,39 @@ auto is_starting_pos(Id const& id) -> bool {
 }
 
 auto is_starting_pos_pt2(Id const& id) -> bool { return id[2] == 'A'; }
+
+auto print(Atlas const& atlas) -> void {
+    std::cout << "digraph aoc2023_d8 {\n";
+    std::cout << "  graph [splines=true overlap=false];\n";
+    std::set<Id> nodes;
+    auto const print_node = [](Id const& id) {
+        std::cout << "  \"" << id << "\"";
+        if (is_starting_pos_pt2(id)) {
+            std::cout << " [style=filled, fillcolor=red]";
+        }
+        if (is_finish_pos_pt2(id)) {
+            std::cout << " [style=filled, fillcolor=green]";
+        }
+        std::cout << ";\n";
+    };
+    for (auto const& [from, to] : atlas) {
+        auto const& [left, right] = to;
+        if (!nodes.count(from)) {
+            nodes.insert(from);
+            print_node(from);
+        }
+        if (!nodes.count(left)) {
+            nodes.insert(left);
+            print_node(left);
+        }
+        if (!nodes.count(right)) {
+            nodes.insert(right);
+            print_node(right);
+        }
+        std::cout << "  \"" << from << "\" -> \"" << left << "\"; \"" << from << "\" -> \"" << right << "\";\n";
+    }
+    std::cout << "}\n";
+}
 
 typedef bool (*id_filter_t)(Id const& id);
 
@@ -113,11 +140,13 @@ auto calculate_steps(
 
 auto main() -> int {
     auto [steps, atlas] = parse(std::cin);
-    /* print(atlas); */
+    print(atlas);
+    /*
     std::cout << calculate_steps(atlas, steps, is_starting_pos, is_finish_pos)
               << std::endl;
     std::cout << calculate_steps(
                      atlas, steps, is_starting_pos_pt2, is_finish_pos_pt2)
               << std::endl;
+              */
     return 0;
 }

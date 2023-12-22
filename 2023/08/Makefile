@@ -1,4 +1,4 @@
-.PHONY: all clean test
+.PHONY: all clean test graph
 
 CC=g++
 CXXFLAGS=--std=c++23 -pedantic -Wall -Wextra
@@ -17,5 +17,17 @@ test: a.out
 	  cat $$output ; \
 	done
 
+graph: a.out
+	mkdir $@ ; \
+	for input in tests/*.in ; do \
+	  type=svg ; \
+	  echo $$input ; \
+	  base=$$(basename $$input) ; \
+	  dot="$@/$${base%%.*}.dot" ; \
+	  cat $$input | ./a.out > $$dot ; \
+	  dot -Ksfdp -T$$type $$dot -o $@/$${base%%.*}.$$type ; \
+	done
+
 clean:
-	rm a.out
+	rm -vf a.out
+	rm -rvf graph
