@@ -56,15 +56,33 @@ auto predict(Ints ints) -> Int {
     return last + predict(ints);
 }
 
-auto main() -> int {
-    auto input = parse(std::cin);
-    /* debug_print("LINE", input); */
+auto predict_pt1(Input const& input) -> Ints {
     Ints results;
     results.reserve(input.size());
     std::transform(
         input.begin(), input.end(), std::back_inserter(results), predict);
-    /* debug_print("PARTIAL", results); */
-    std::cout << std::accumulate(results.begin(), results.end(), 0)
-              << std::endl;
+    return results;
+}
+
+auto predict_pt2(Input input) -> Ints {
+    std::transform(input.begin(), input.end(), input.begin(), [](Ints& ints) {
+        std::reverse(ints.begin(), ints.end());
+        return ints;
+    });
+    Ints results;
+    results.reserve(input.size());
+    std::transform(
+        input.begin(), input.end(), std::back_inserter(results), predict);
+    return results;
+}
+
+auto sum(Ints const& ints) -> Int {
+    return std::accumulate(ints.begin(), ints.end(), 0);
+}
+
+auto main() -> int {
+    auto input = parse(std::cin);
+    std::cout << sum(predict_pt1(input)) << std::endl;
+    std::cout << sum(predict_pt2(input)) << std::endl;
     return 0;
 }
