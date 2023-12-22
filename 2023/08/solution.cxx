@@ -1,9 +1,11 @@
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <iostream>
 #include <map>
-#include <vector>
+#include <numeric>
 #include <set>
+#include <vector>
 
 struct Steps {
     Steps(std::string const& _steps) : steps{_steps} {};
@@ -19,16 +21,15 @@ struct Steps {
         }
         return step;
     }
-    auto get_count() const -> unsigned int {
-        return steps.size() * (rotations - 1) +
+    auto get_count() const -> unsigned long {
+        return steps.size() * (rotations - 1ul) +
                std::distance(steps.cbegin(), iter);
     }
-    auto size() const -> unsigned int { return steps.size(); }
 
 private:
     std::string steps;
     std::string::const_iterator iter;
-    unsigned int rotations{};
+    unsigned long rotations{};
 };
 
 using Id = std::array<char, 3>;
@@ -104,9 +105,23 @@ auto print(Atlas const& atlas) -> void {
             nodes.insert(right);
             print_node(right);
         }
-        std::cout << "  \"" << from << "\" -> \"" << left << "\"; \"" << from << "\" -> \"" << right << "\";\n";
+        std::cout << "  \"" << from << "\" -> \"" << left << "\"; \"" << from
+                  << "\" -> \"" << right << "\";\n";
     }
     std::cout << "}\n";
+
+    // Graph analysis for part 2
+    //  * The graph is divided into disjoint loops
+    //  * Each loop has precisely one start and one finish
+    //  * Both start and finish lead to the same nodes after 1 step
+    //  * Each start should be considered an independent case
+    //  * The loop consists of pairs of nodes (aside from the start)
+    //  * Each pair leads to the next pair, regardless of the direction
+    //  * Therefore, we will hit finish every single time we circle back
+    //  * Therefore, all loops will land on the end nodes when they perform the
+    //  LCM number of full loops
+    //  * To do: 1) calculate #steps to get from start to finish, 2) calculate
+    //  LCM
 }
 
 typedef bool (*id_filter_t)(Id const& id);
@@ -138,15 +153,93 @@ auto calculate_steps(
     return steps.get_count();
 }
 
+auto generate_primes(unsigned long n) -> std::set<unsigned long> {
+    // Algorithm with no optimizations and no memoization
+    std::vector<unsigned long> sieve(n);
+    std::iota(sieve.begin(), sieve.end(), 0);
+    sieve[1] = 0ul;
+    for (auto i = 2ul; i < n; ++i) {
+        if (sieve[i] != 0ul) {
+            for (auto j = 2ul * i; j < n; j += i) {
+                sieve[j] = 0ul;
+            }
+        }
+    }
+    std::set<unsigned long> results;
+    std::copy_if(
+        sieve.begin(), sieve.end(), std::inserter(results, results.begin()),
+        [](unsigned long x) -> bool { return x; });
+    return results;
+}
+
+auto prime_factors(unsigned long x) -> std::map<unsigned long, unsigned long> {
+    // Returns map factor-count
+    std::map<unsigned long, unsigned long> factors;
+    auto const primes = generate_primes(x + 1ul);
+    for (auto prime : primes) {
+        auto y = x;
+        while (y % prime == 0ul) {
+            factors[prime]++;
+            y /= prime;
+        }
+    }
+    return factors;
+}
+
+auto calculate_lcm(std::vector<unsigned long> const& xs) -> unsigned long {
+    std::map<unsigned long, unsigned long> factors;
+    for (auto x : xs) {
+        for (auto [factor, count] : prime_factors(x)) {
+            if (!factors.contains(factor)) {
+                factors[factor] = count;
+            } else if (factors[factor] < count) {
+                factors[factor] = count;
+            }
+        }
+    }
+    return std::transform_reduce(
+        factors.begin(), factors.end(), 1ul, std::multiplies{},
+        [](auto const& entry) {
+            auto res = 1ul;
+            for (auto i = 0ul; i < entry.second; ++i) {
+                res *= entry.first;
+            }
+            return res;
+        });
+}
+
+auto count_steps_2(Atlas const& atlas, Steps steps, Id const& id)
+    -> unsigned long {
+    auto node = id;
+    while (!is_finish_pos_pt2(node)) {
+        if (steps.get_step() == 'L') {
+            node = atlas.at(node).first;
+        } else {
+            node = atlas.at(node).second;
+        }
+    }
+    return steps.get_count();
+}
+
+auto calculate_steps_2(Atlas const& atlas, Steps steps) -> unsigned long {
+    auto starts = generate_starting_positions(atlas, is_starting_pos_pt2);
+    std::vector<unsigned long> paths;
+    std::transform(
+        starts.begin(), starts.end(), std::back_inserter(paths),
+        [&atlas, &steps](Id const& id) {
+            return count_steps_2(atlas, steps, id);
+        });
+    for (auto x : paths) {
+        std::cout << "path: " << x << "\n";
+    }
+    return calculate_lcm(paths);
+}
+
 auto main() -> int {
     auto [steps, atlas] = parse(std::cin);
     print(atlas);
-    /*
-    std::cout << calculate_steps(atlas, steps, is_starting_pos, is_finish_pos)
-              << std::endl;
-    std::cout << calculate_steps(
-                     atlas, steps, is_starting_pos_pt2, is_finish_pos_pt2)
-              << std::endl;
-              */
+    // std::cout << calculate_steps(atlas, steps, is_starting_pos,
+    // is_finish_pos) << std::endl;
+    std::cout << calculate_steps_2(atlas, steps) << std::endl;
     return 0;
 }

@@ -9,23 +9,27 @@ a.out: solution.cxx
 	$(CC) $(CXXFLAGS) $<
 
 test: a.out
-	for input in tests/*.in ; do \
-	  echo $$input ; \
-	  cat $$input | ./a.out ; \
-	  output="$${input%%.*}.out" ; \
-	  echo $$output ; \
-	  cat $$output ; \
-	done
+	# for input in tests/*.in ; do \
+	#   echo $$input ; \
+	#   cat $$input | ./a.out ; \
+	#   output="$${input%%.*}.out" ; \
+	#   echo $$output ; \
+	#   cat $$output ; \
+	# done
+	# Testing for the simplified case
+	cat tests/03.in | ./a.out
 
 graph: a.out
+	# Layout: dot, sfdp, neato, fdp, circo, twopi
 	mkdir $@ ; \
 	for input in tests/*.in ; do \
-	  type=svg ; \
+	  layout=sfdp ; \
+	  type=png ; \
 	  echo $$input ; \
 	  base=$$(basename $$input) ; \
 	  dot="$@/$${base%%.*}.dot" ; \
 	  cat $$input | ./a.out > $$dot ; \
-	  dot -Ksfdp -T$$type $$dot -o $@/$${base%%.*}.$$type ; \
+	  dot -K$$layout -T$$type $$dot -o $@/$${base%%.*}.$$type ; \
 	done
 
 clean:
