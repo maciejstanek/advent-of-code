@@ -107,7 +107,7 @@ auto debug_print(T const& grid) -> void {
         auto first = true;
         for (auto const& value : line) {
             if (!first) {
-                std::cout << '\t';
+                // std::cout << '\t';
             }
             first = false;
             std::cout << value;
@@ -120,7 +120,8 @@ auto lookup(Grid const& grid, Point const& point) -> Number {
     return grid[point.first][point.second];
 }
 
-auto enter(Grid& grid, Point const& point, Number value) -> void {
+template <typename T>
+auto enter(T& grid, Point const& point, Number value) -> void {
     grid[point.first][point.second] = value;
 }
 
@@ -155,12 +156,9 @@ auto max(Grid const& grid) -> Number {
         });
 }
 
-auto solve(Input const& input) -> Number {
+auto trace_path(Input const& input) -> Grid {
     auto grid = generate_empty_grid(input);
     auto start = find_start_point(input);
-    std::cout << start << std::endl;
-    auto const start_value = lookup(input, start);
-    std::cout << start_value << std::endl;
     Points points{start};
     enter(grid, start, 1);
     while (!points.empty()) {
@@ -177,13 +175,106 @@ auto solve(Input const& input) -> Number {
             enter(grid, *b_opt, point_value + 1);
         }
     }
+    return grid;
+}
+
+auto solve(Input const& input) -> Number {
+    auto const grid = trace_path(input);
     debug_print(grid);
     return max(grid) - 1;
+}
+
+auto expand(Line const& line) -> Line {
+    Line result;
+    result.reserve(line.size() * 2 + 1);
+    bool first = true;
+    for (auto symbol : line) {
+        result += first ? '.' : '-';
+        first = false;
+        result += symbol;
+    }
+    result += '.';
+    return result;
+}
+
+auto make_spacer(size_t size) -> Line {
+    Line line;
+    line.reserve(size);
+    while (size--) {
+        line += size % 2 ? '|' : '.';
+    }
+    return line;
+}
+
+auto expand(Input const& input) -> Input {
+    auto const new_width = input[0].size() * 2 + 1;
+    Input result;
+    result.reserve(input.size() * 2 + 1);
+    result.emplace_back(new_width, '.');
+    auto first = true;
+    for (auto const& line : input) {
+        if (!first) {
+            result.push_back(make_spacer(new_width));
+        }
+        first = false;
+        result.push_back(expand(line));
+    }
+    result.emplace_back(new_width, '.');
+    // Make fix for S point deduction
+    auto const input_s_point = find_start_point(input);
+    auto const result_s_point = find_start_point(result);
+    if (!goes_s(raw_lookup(input, step_n(input_s_point)))) {
+        enter(result, step_n(result_s_point), '.');
+    }
+    if (!goes_n(raw_lookup(input, step_s(input_s_point)))) {
+        enter(result, step_s(result_s_point), '.');
+    }
+    if (!goes_e(raw_lookup(input, step_w(input_s_point)))) {
+        enter(result, step_w(result_s_point), '.');
+    }
+    if (!goes_w(raw_lookup(input, step_e(input_s_point)))) {
+        enter(result, step_e(result_s_point), '.');
+    }
+    return result;
+}
+
+auto contract(Line const& line) -> Line {
+    Line result;
+    result.reserve((line.size() - 1) / 2);
+    for (auto i = std::next(line.begin()); i != line.end(); i += 2) {
+        result += *i;
+    }
+    return result;
+}
+
+auto contract(Input const& input) -> Input {
+    Input result;
+    result.reserve((input.size() - 1) / 2);
+    for (auto i = input.begin(); i != input.end(); ++i) {
+        if (std::distance(input.begin(), i) % 2) {
+            result.push_back(contract(*i));
+        }
+    }
+    return result;
+}
+
+auto solve2(Input const& input) -> Number {
+    std::cout << "INPUT\n";
+    debug_print(input);
+    auto const expanded = expand(input);
+    std::cout << "EXPANDED\n";
+    debug_print(expanded);
+    // TODO
+    auto const contracted = contract(expanded);
+    std::cout << "CONTRACTED\n";
+    debug_print(contracted);
+    return 123;
 }
 
 auto main() -> int {
     auto const input = parse(std::cin);
     debug_print(input);
     std::cout << solve(input) << std::endl;
+    std::cout << solve2(input) << std::endl;
     return 0;
 }
