@@ -1,1 +1,1 @@
-![map](image.pbm)
+![map](image.png)
