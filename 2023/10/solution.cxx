@@ -9,7 +9,7 @@
 
 using Line = std::string;
 using Input = std::vector<Line>;
-using Number = int;
+using Number = signed int;
 using Point = std::pair<Number, Number>;
 using Point_opt = std::optional<Point>;
 using Point_opt_pair = std::pair<Point_opt, Point_opt>;
@@ -117,7 +117,12 @@ auto debug_print(T const& grid) -> void {
 }
 
 auto lookup(Grid const& grid, Point const& point) -> Number {
-    return grid[point.first][point.second];
+    return (point.first >= 0 &&
+            point.first < static_cast<Number>(grid.size()) &&
+            point.second >= 0 &&
+            point.second < static_cast<Number>(grid[0].size())) ?
+               grid[point.first][point.second] :
+               std::numeric_limits<Number>::max();
 }
 
 template <typename T>
@@ -180,7 +185,6 @@ auto trace_path(Input const& input) -> Grid {
 
 auto solve(Input const& input) -> Number {
     auto const grid = trace_path(input);
-    debug_print(grid);
     return max(grid) - 1;
 }
 
@@ -238,37 +242,129 @@ auto expand(Input const& input) -> Input {
     return result;
 }
 
-auto contract(Line const& line) -> Line {
-    Line result;
-    result.reserve((line.size() - 1) / 2);
-    for (auto i = std::next(line.begin()); i != line.end(); i += 2) {
-        result += *i;
+auto contract(Numbers const& numbers) -> Numbers {
+    Numbers result;
+    result.reserve((numbers.size() - 1) / 2);
+    for (auto i = std::next(numbers.begin()); i != numbers.end(); i += 2) {
+        result.push_back(*i);
     }
     return result;
 }
 
-auto contract(Input const& input) -> Input {
-    Input result;
-    result.reserve((input.size() - 1) / 2);
-    for (auto i = input.begin(); i != input.end(); ++i) {
-        if (std::distance(input.begin(), i) % 2) {
+auto contract(Grid const& grid) -> Grid {
+    Grid result;
+    result.reserve((grid.size() - 1) / 2);
+    for (auto i = grid.begin(); i != grid.end(); ++i) {
+        if (std::distance(grid.begin(), i) % 2) {
             result.push_back(contract(*i));
         }
     }
     return result;
 }
 
+auto clamp01(Grid const& grid) -> Grid {
+    Grid result(grid);
+    for (auto& line : result) {
+        for (auto& value : line) {
+            value = value ? 1 : 0;
+        }
+    }
+    return result;
+}
+
+auto propagate(Grid& grid, Number a, Number b) -> void {
+    auto changes = 1;
+    while (changes) {
+        changes = 0;
+        for (auto i = grid.begin(); i != grid.end(); ++i) {
+            for (auto j = i->begin(); j != i->end(); ++j) {
+                if (*j == a || *j == b) {
+                    auto const p = Point{
+                        std::distance(grid.begin(), i),
+                        std::distance(i->begin(), j)};
+                    if (auto n = step_n(p); !lookup(grid, n)) {
+                        enter(grid, n, *j);
+                        ++changes;
+                    }
+                    if (auto e = step_e(p); !lookup(grid, e)) {
+                        enter(grid, e, *j);
+                        ++changes;
+                    }
+                    if (auto s = step_s(p); !lookup(grid, s)) {
+                        enter(grid, s, *j);
+                        ++changes;
+                    }
+                    if (auto w = step_w(p); !lookup(grid, w)) {
+                        enter(grid, w, *j);
+                        ++changes;
+                    }
+                }
+            }
+        }
+    }
+}
+
+auto count(Grid const& grid, Number neddle) -> Number {
+    return std::transform_reduce(
+        grid.begin(), grid.end(), 0, std::plus{},
+        [&neddle](Numbers const& numbers) {
+            return std::count(numbers.begin(), numbers.end(), neddle);
+        });
+}
+
+auto print_with_colors(Grid const& grid) -> void {
+    for (const auto& line : grid) {
+        for (auto v : line) {
+            std::cout << "\033[0;"
+                      << (v == 0 ? 30 :
+                          v == 1 ? 37 :
+                          v == 2 ? 31 :
+                                   32)
+                      << "m"
+                      << (v == 0 ? '.' :
+                          v == 1 ? '#' :
+                                   '+')
+                      << "\033[0m";
+        }
+        std::cout << "\n";
+    }
+}
+
 auto solve2(Input const& input) -> Number {
-    std::cout << "INPUT\n";
-    debug_print(input);
     auto const expanded = expand(input);
-    std::cout << "EXPANDED\n";
-    debug_print(expanded);
-    // TODO
-    auto const contracted = contract(expanded);
-    std::cout << "CONTRACTED\n";
-    debug_print(contracted);
-    return 123;
+    auto grid = clamp01(trace_path(expanded));
+    auto const start = find_start_point(expanded);
+    auto const n = lookup(grid, step_n(start));
+    auto const e = lookup(grid, step_e(start));
+    auto const s = lookup(grid, step_s(start));
+    auto const w = lookup(grid, step_w(start));
+    auto const red = 2;
+    auto const blue = 3;
+    if (n && s) {
+        enter(grid, step_e(start), red);
+        enter(grid, step_w(start), blue);
+    } else if (e && w) {
+        enter(grid, step_n(start), red);
+        enter(grid, step_s(start), blue);
+    } else if (n && e) {
+        enter(grid, step_n(step_e(start)), red);
+        enter(grid, step_s(start), blue);
+    } else if (e && s) {
+        enter(grid, step_e(step_s(start)), red);
+        enter(grid, step_w(start), blue);
+    } else if (s && w) {
+        enter(grid, step_s(step_w(start)), red);
+        enter(grid, step_n(start), blue);
+    } else if (w && n) {
+        enter(grid, step_w(step_n(start)), red);
+        enter(grid, step_e(start), blue);
+    }
+    propagate(grid, red, blue);
+    print_with_colors(grid);
+    auto const contracted = contract(grid);
+    print_with_colors(contracted);
+    auto neddle = grid[0][0] == red ? blue : red;
+    return count(contracted, neddle);
 }
 
 auto main() -> int {
