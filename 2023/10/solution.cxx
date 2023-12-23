@@ -330,6 +330,19 @@ auto print_with_colors(Grid const& grid) -> void {
     }
 }
 
+auto print_pbm(Grid const& grid) -> void {
+    std::cout << "P3\n";
+    std::cout << grid[0].size() << " " << grid.size() << " 1\n";
+    for (const auto& line : grid) {
+        for (auto v : line) {
+            std::cout << (v == 0 ? "1 1 1" :
+                          v == 1 ? "0 0 0" :
+                          v == 2 ? "1 0 0" :
+                                   "0 1 0") << '\n';
+        }
+    }
+}
+
 auto solve2(Input const& input) -> Number {
     auto const expanded = expand(input);
     auto grid = clamp01(trace_path(expanded));
@@ -361,6 +374,7 @@ auto solve2(Input const& input) -> Number {
     }
     propagate(grid, red, blue);
     print_with_colors(grid);
+    print_pbm(grid);
     auto const contracted = contract(grid);
     print_with_colors(contracted);
     auto neddle = grid[0][0] == red ? blue : red;
