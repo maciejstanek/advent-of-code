@@ -1,12 +1,13 @@
 #include <algorithm>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <vector>
 
 using Line = std::string;
 using Input = std::vector<Line>;
-using Number = int;
-using Numbers = std::vector<int>;
+using Number = unsigned long long int;
+using Numbers = std::vector<Number>;
 
 auto parse(std::istream& input) -> Input {
     Input result;
@@ -49,14 +50,29 @@ auto find_galaxies(Input const& input) -> Numbers {
     return positions;
 }
 
-auto expand(Numbers galaxies, Numbers const& expansions) -> Numbers {
-    // Assumption: expansions and galaxies are sorted. We can start form the
-    // last expansion and add 1 to only those which are further. This will cause
-    // the expansions to correctly apply the correct number of times.
+auto find_galaxies_inverted(Input const& input) -> Numbers {
+    Numbers positions;
+    for (auto i = input[0].begin(); i != input[0].end(); ++i) {
+        const auto i_pos = std::distance(input[0].begin(), i);
+        for (auto j = input.begin(); j != input.end(); ++j) {
+            if (j->at(i_pos) == '#') {
+                positions.push_back(std::distance(input.begin(), j));
+            }
+        }
+    }
+    return positions;
+}
+
+auto expand(Numbers galaxies, Numbers const& expansions, Number factor)
+    -> Numbers {
+    // Assumption: expansion points are sorted. We can start from the last
+    // expansion and add the factor to only those galaxies which are further
+    // away. This will cause the expansions to correctly apply the desired
+    // number of times.
     for (auto i = expansions.rbegin(); i != expansions.rend(); ++i) {
         auto const& expansion = *i;
-        auto const expand_once = [&expansion](Number galaxy) {
-            return galaxy + (galaxy > expansion);
+        auto const expand_once = [&expansion, &factor](Number galaxy) {
+            return galaxy + (galaxy > expansion ? factor - 1 : 0ull);
         };
         std::transform(
             galaxies.begin(), galaxies.end(), galaxies.begin(), expand_once);
@@ -64,13 +80,13 @@ auto expand(Numbers galaxies, Numbers const& expansions) -> Numbers {
     return galaxies;
 }
 
-auto abs(Number x) -> Number { return x >= 0 ? x : -x; }
+auto absdiff(Number x, Number y) -> Number { return x > y ? x - y : y - x; }
 
 auto sum_all_distances(Numbers const& galaxies) -> Number {
     Number sum{};
     for (auto i = galaxies.begin(); i != galaxies.end(); ++i) {
         for (auto j = std::next(i); j != galaxies.end(); ++j) {
-            sum += abs(*i - *j);
+            sum += absdiff(*i, *j);
         }
     }
     return sum;
@@ -90,28 +106,31 @@ auto debug_print(Input const& input) -> void {
     }
 }
 
-auto partial_solve(Input const& input) -> Number {
-    debug_print(input);
-    auto const expansion_positions = calculate_expanded_rows(input);
+auto partial_solve(Input const& input, bool invert, Number factor) -> Numbers {
+    auto const inverted = invert ? ::invert(input) : input;
+    /* debug_print(inverted); */
+    auto const expansion_positions = calculate_expanded_rows(inverted);
     debug_print(expansion_positions);
-    auto const galaxies_positions = find_galaxies(input);
+    auto const galaxies_positions =
+        invert ? find_galaxies_inverted(inverted) : find_galaxies(inverted);
     debug_print(galaxies_positions);
-    auto const expanded = expand(galaxies_positions, expansion_positions);
+    auto const expanded =
+        expand(galaxies_positions, expansion_positions, factor);
     debug_print(expanded);
-    auto const sum = sum_all_distances(expanded);
-    return sum;
+    return expanded;
 }
 
-auto solve(Input const& input) -> Number {
+auto solve(Input const& input, Number factor) -> Number {
     std::cout << "INPUT\n";
-    auto vertical = partial_solve(input);
+    auto const vertical = partial_solve(input, false, factor);
     std::cout << "INVERTED\n";
-    auto horizontal = partial_solve(invert(input));
-    return vertical + horizontal;
+    auto const horizontal = partial_solve(input, true, factor);
+    return sum_all_distances(vertical) + sum_all_distances(horizontal);
 }
 
 auto main() -> int {
     auto const input = parse(std::cin);
-    std::cout << solve(input) << std::endl;
+    std::cout << solve(input, 2) << std::endl;
+    std::cout << solve(input, 1'000'000) << std::endl;
     return 0;
 }
