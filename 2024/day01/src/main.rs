@@ -11,13 +11,25 @@ fn parse() -> (Vec<i32>, Vec<i32>) {
         aa.push(a.parse::<i32>().unwrap());
         bb.push(b.parse::<i32>().unwrap());
     }
-    aa.sort();
-    bb.sort();
     (aa, bb)
 }
 
 fn main() {
     let (aa, bb) = parse();
-    let cc: i32 = aa.iter().zip(bb.iter()).map(|x| i32::abs(x.0 - x.1)).sum();
+    let mut a_sorted = aa.clone();
+    let mut b_sorted = bb.clone();
+    a_sorted.sort();
+    b_sorted.sort();
+    let cc: i32 = a_sorted
+        .iter()
+        .zip(b_sorted.iter())
+        .map(|x| i32::abs(x.0 - x.1))
+        .sum();
     println!("{}", cc);
+    let mut aa_counts = Vec::<usize>::new();
+    for a in aa {
+        let partial: usize = bb.iter().filter(|x| **x == a).count();
+        aa_counts.push(partial * (a as usize));
+    }
+    println!("{}", aa_counts.iter().sum::<usize>());
 }
