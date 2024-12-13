@@ -15,7 +15,7 @@ fn parse() -> Vec<Vec<i32>> {
     inputs
 }
 
-fn is_safe(sequence: Vec<i32>) -> bool {
+fn is_safe(sequence: &Vec<i32>) -> bool {
     let result = sequence
         .windows(2)
         .map(|ab| {
@@ -36,11 +36,6 @@ fn is_safe(sequence: Vec<i32>) -> bool {
 
 fn main() {
     let inputs = parse();
-    let mut sum_safe: i32 = 0;
-    for input in inputs {
-        if is_safe(input) {
-            sum_safe += 1;
-        }
-    }
+    let sum_safe: i32 = inputs.iter().map(|x| is_safe(x) as i32).sum();
     println!("{}", sum_safe);
 }
