@@ -19,11 +19,53 @@ auto parse(std::istream& input) -> std::vector<int> {
 }
 
 auto main() -> int {
-    auto x = parse(std::cin);
-    constexpr const auto add_modulo_100 = [](int a, int b) {
+    const auto x = parse(std::cin);
+
+    std::vector<int> y;
+    y.reserve(x.size());
+    const auto add_modulo_100 = [](int a, int b) {
         return (a + b + 200) % 100;
     };
-    std::inclusive_scan(x.begin(), x.end(), x.begin(), add_modulo_100, 50);
-    std::cout << std::count(x.begin(), x.end(), 0) << '\n';
+    std::inclusive_scan(x.begin(), x.end(), std::back_inserter(y), add_modulo_100, 50);
+    std::cout << std::count(y.begin(), y.end(), 0) << '\n';
+
+    std::vector<int> z;
+    z.reserve(x.size());
+    auto count = 0;
+    const auto part2 = [&](int pos, int turn) {
+        if (turn > 0) {
+            count += turn / 100;
+            turn = (turn % 100);
+
+            if (turn + pos >= 100) {
+                count += 1;
+            }
+        }
+        if (turn < 0) {
+            // Treat left turns as right turns but reverse them
+            turn = -turn;
+            if (pos > 0) {
+                pos = 100 - pos;
+            }
+
+            count += turn / 100;
+            turn = (turn % 100);
+
+            if (turn + pos >= 100) {
+                count += 1;
+            }
+
+            // Invert back
+            turn = -turn;
+            if (pos > 0) {
+                pos = 100 - pos;
+            }
+        }
+        return (pos + turn + 200) % 100;
+    };
+    std::inclusive_scan(x.begin(), x.end(), std::back_inserter(z), part2, 50);
+    std::cout << "verif p1: " << std::count(y.begin(), y.end(), 0) << '\n';
+    std::cout << "p2: " << count << '\n';
+
     return 0;
 }
