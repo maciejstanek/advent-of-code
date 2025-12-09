@@ -1,7 +1,7 @@
 .PHONY: all clean test
 
 CC=g++
-CXXFLAGS=--std=c++23 -pedantic -Wall -Wextra
+CXXFLAGS=--std=c++23 -pedantic -Wall -Wextra -lpthread -ltbb
 
 all: a.out
 
